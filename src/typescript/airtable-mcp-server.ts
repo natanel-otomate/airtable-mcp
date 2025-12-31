@@ -91,27 +91,9 @@ export async function start(): Promise<void> {
       if (req.url === '/mcp' || req.url === '/') {
         // Handle GET requests
         if (req.method === 'GET') {
-          // Check if client wants SSE (Server-Sent Events)
-          const acceptHeader = req.headers['accept'] || '';
-          if (acceptHeader.includes('text/event-stream')) {
-            // Let transport handle SSE GET request
-            try {
-              await transport.handleRequest(req, res);
-              return;
-            } catch (error) {
-              logger.error('Error handling SSE GET request', { 
-                error: error instanceof Error ? error.message : String(error),
-                stack: error instanceof Error ? error.stack : undefined
-              });
-              // If transport fails, fall through to regular GET response
-              if (res.headersSent) {
-                return;
-              }
-            }
-          }
-          
-          // Regular GET request for connection verification
-          // Always return success for GET requests (Make.com compatibility)
+          // Always return JSON for GET requests (Make.com connection verification)
+          // The transport's handleRequest expects POST for MCP protocol
+          // GET is only used for verification/health checks
           res.writeHead(200, { 
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*',
@@ -124,9 +106,8 @@ export async function start(): Promise<void> {
             version: config.version,
             protocol: 'MCP 2024-11-05',
             endpoint: '/mcp',
-            methods: ['GET', 'POST'],
-            supportsSSE: true,
-            message: 'MCP server is running. Supports both JSON and SSE responses.'
+            methods: ['POST'],
+            message: 'MCP server is running. Use POST method for MCP protocol requests.'
           }));
           return;
         }
