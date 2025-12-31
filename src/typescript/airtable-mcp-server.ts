@@ -161,25 +161,45 @@ export async function start(): Promise<void> {
             let responseChunks: Buffer[] = [];
             let isSSE = false;
             
-            res.writeHead = function(statusCode: number, statusMessage?: string | http.OutgoingHttpHeaders, headers?: http.OutgoingHttpHeaders) {
-              const allHeaders = typeof statusMessage === 'object' ? statusMessage : headers || {};
-              const contentType = typeof allHeaders === 'object' && 'Content-Type' in allHeaders 
-                ? allHeaders['Content-Type'] 
-                : (typeof statusMessage === 'object' && 'Content-Type' in statusMessage ? statusMessage['Content-Type'] : undefined);
+            // Override writeHead to detect SSE and convert to JSON
+            res.writeHead = function(statusCode: number, statusMessageOrHeaders?: string | http.OutgoingHttpHeaders | http.OutgoingHttpHeader[], headers?: http.OutgoingHttpHeaders | http.OutgoingHttpHeader[]) {
+              // Determine which overload is being used
+              let actualHeaders: http.OutgoingHttpHeaders | undefined;
+              let actualStatusMessage: string | undefined;
               
-              if (contentType === 'text/event-stream') {
+              if (typeof statusMessageOrHeaders === 'string') {
+                // First overload: (statusCode, statusMessage, headers)
+                actualStatusMessage = statusMessageOrHeaders;
+                actualHeaders = headers as http.OutgoingHttpHeaders | undefined;
+              } else {
+                // Second overload: (statusCode, headers)
+                actualHeaders = statusMessageOrHeaders as http.OutgoingHttpHeaders | undefined;
+              }
+              
+              // Check if content-type is text/event-stream
+              const contentType = actualHeaders?.['content-type'] || actualHeaders?.['Content-Type'];
+              if (contentType === 'text/event-stream' || (Array.isArray(contentType) && contentType.includes('text/event-stream'))) {
                 isSSE = true;
                 // Change to JSON content type
-                if (typeof allHeaders === 'object') {
-                  allHeaders['Content-Type'] = 'application/json';
-                }
-                if (typeof statusMessage === 'object' && 'Content-Type' in statusMessage) {
-                  statusMessage['Content-Type'] = 'application/json';
+                if (actualHeaders) {
+                  if (Array.isArray(actualHeaders['content-type'])) {
+                    actualHeaders['content-type'] = ['application/json'];
+                  } else if (Array.isArray(actualHeaders['Content-Type'])) {
+                    actualHeaders['Content-Type'] = ['application/json'];
+                  } else {
+                    actualHeaders['content-type'] = 'application/json';
+                    actualHeaders['Content-Type'] = 'application/json';
+                  }
                 }
               }
               
-              return originalWriteHead(statusCode, statusMessage as any, headers);
-            };
+              // Call original with proper arguments
+              if (actualStatusMessage !== undefined) {
+                return originalWriteHead(statusCode, actualStatusMessage, actualHeaders);
+              } else {
+                return originalWriteHead(statusCode, actualHeaders);
+              }
+            } as typeof res.writeHead;
             
             res.write = function(chunk: any, encoding?: any) {
               if (isSSE) {
