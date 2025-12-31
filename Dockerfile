@@ -27,12 +27,14 @@ RUN test -f dist/typescript/airtable-mcp-server.js && echo "✓ Build successful
 # Remove dev dependencies to reduce image size
 RUN npm ci --only=production && npm cache clean --force
 
-# Expose HTTP port
+# Expose HTTP port (Railway will assign the actual port via PORT env var)
 EXPOSE 8080
 
 # Set environment variable for HTTP mode
-ENV PORT=8080
+# Note: Railway auto-assigns PORT, but we set a default for local testing
+ENV PORT=${PORT:-8080}
 ENV NODE_ENV=production
 
 # Start the server
+# Railway will override this with startCommand, but this is the fallback
 CMD ["node", "dist/typescript/airtable-mcp-server.js"]
