@@ -34,7 +34,7 @@
     "format": "prettier --write \"src/**/*.{js,ts,json,md}\"",
     "format:check": "prettier --check \"src/**/*.{js,ts,json,md}\"",
     "dev": "nodemon --watch src --exec ts-node src/typescript/airtable-mcp-server.ts",
-    "prepare": "npm run build",
+    "prepare": "echo 'Skipping build in prepare hook for Railway deployment'",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
