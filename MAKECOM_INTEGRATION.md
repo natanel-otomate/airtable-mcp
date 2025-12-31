@@ -44,13 +44,15 @@ Expected response:
 1. In your AI Agent settings, look for **"MCP Servers"** or **"Tools"** section
 2. Click **"Add MCP Server"** or **"Add Tool"**
 3. Configure the connection:
-   - **Name**: `Airtable MCP`
+   - **Name**: `https://airtable-mcp-production-2056.up.railway.app/mcp`
    - **URL**: `https://airtable-mcp-production-2056.up.railway.app/mcp`
    - **Protocol**: HTTP/JSON-RPC 2.0
    - **Authentication**: **Leave empty** (your Airtable token is already in the server)
    - **Important**: Do NOT provide an access token in Make.com - the server doesn't require client authentication
 
-### Troubleshooting "Server already initialized" Error
+### Troubleshooting
+
+#### "Server already initialized" Error
 
 If you see the error `"Server already initialized"`, it means Make.com is trying to initialize the same session twice. This can happen if:
 
@@ -61,6 +63,27 @@ If you see the error `"Server already initialized"`, it means Make.com is trying
    - Waiting 30-60 seconds between connection attempts
 
 **Note**: The MCP server uses session-based connections. Each new connection should create a new session automatically. If you continue to see this error, it may be a Make.com client issue with session management.
+
+#### 401 Unauthorized Error
+
+If you see a **401 Unauthorized** error in Make.com's console:
+
+1. **Check Make.com MCP configuration**:
+   - Ensure the **Authentication** field is **completely empty**
+   - Do NOT enter any access token, API key, or OAuth credentials
+   - The server does NOT require client authentication
+
+2. **Verify server is running**:
+   - Check the health endpoint: `https://airtable-mcp-production-2056.up.railway.app/health`
+   - Should return: `{"status":"ok","version":"3.2.8"}`
+
+3. **Check Railway environment variables**:
+   - Ensure `AIRTABLE_TOKEN` or `AIRTABLE_PAT` is set in Railway
+   - The server uses this token server-side - clients don't need to provide it
+
+4. **If Make.com requires authentication fields**:
+   - Try entering a dummy value (like "none" or "not-required")
+   - Or contact Make.com support about MCP servers that don't require client authentication
 
 ### Option B: Using HTTP Module (If Direct MCP Not Supported)
 
