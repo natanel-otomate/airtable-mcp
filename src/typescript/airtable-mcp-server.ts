@@ -133,9 +133,14 @@ export async function start(): Promise<void> {
               headers: {
                 'content-type': req.headers['content-type'],
                 'accept': req.headers['accept'],
+                'authorization': req.headers['authorization'] ? '[present]' : '[absent]',
                 'user-agent': req.headers['user-agent']
               }
             });
+            
+            // Note: Our server doesn't require client authentication
+            // Make.com might send Authorization headers, but we ignore them
+            // The Airtable token is configured server-side via environment variables
             
             // Ensure proper headers for SSE if requested
             const acceptHeader = req.headers['accept'] || '';
