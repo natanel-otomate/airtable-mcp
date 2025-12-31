@@ -142,9 +142,96 @@ export async function start(): Promise<void> {
             // Make.com might send Authorization headers, but we ignore them
             // The Airtable token is configured server-side via environment variables
             
+            // Force JSON mode for Make.com compatibility
+            // Remove text/event-stream from Accept header to prevent SSE format
+            const acceptHeader = req.headers['accept'] || '';
+            if (acceptHeader.includes('text/event-stream') && !acceptHeader.includes('application/json')) {
+              // If only SSE is requested, add application/json to prefer JSON
+              req.headers['accept'] = 'application/json, text/event-stream';
+            } else if (!acceptHeader.includes('application/json')) {
+              // If no Accept header or doesn't include JSON, prefer JSON
+              req.headers['accept'] = 'application/json';
+            }
+            
+            // Intercept response to convert SSE to plain JSON if needed
+            const originalWrite = res.write.bind(res);
+            const originalEnd = res.end.bind(res);
+            const originalWriteHead = res.writeHead.bind(res);
+            
+            let responseChunks: Buffer[] = [];
+            let isSSE = false;
+            
+            res.writeHead = function(statusCode: number, statusMessage?: string | http.OutgoingHttpHeaders, headers?: http.OutgoingHttpHeaders) {
+              const allHeaders = typeof statusMessage === 'object' ? statusMessage : headers || {};
+              const contentType = typeof allHeaders === 'object' && 'Content-Type' in allHeaders 
+                ? allHeaders['Content-Type'] 
+                : (typeof statusMessage === 'object' && 'Content-Type' in statusMessage ? statusMessage['Content-Type'] : undefined);
+              
+              if (contentType === 'text/event-stream') {
+                isSSE = true;
+                // Change to JSON content type
+                if (typeof allHeaders === 'object') {
+                  allHeaders['Content-Type'] = 'application/json';
+                }
+                if (typeof statusMessage === 'object' && 'Content-Type' in statusMessage) {
+                  statusMessage['Content-Type'] = 'application/json';
+                }
+              }
+              
+              return originalWriteHead(statusCode, statusMessage as any, headers);
+            };
+            
+            res.write = function(chunk: any, encoding?: any) {
+              if (isSSE) {
+                responseChunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, encoding));
+                return true;
+              }
+              return originalWrite(chunk, encoding);
+            };
+            
+            res.end = function(chunk?: any, encoding?: any) {
+              if (isSSE) {
+                // Collect any final chunk
+                if (chunk) {
+                  responseChunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, encoding || 'utf-8'));
+                }
+                
+                // Parse SSE format and extract JSON
+                if (responseChunks.length > 0) {
+                  const fullResponse = Buffer.concat(responseChunks).toString('utf-8');
+                  const lines = fullResponse.split('\n');
+                  
+                  // Look for data: lines in SSE format
+                  for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                      const jsonData = line.substring(6).trim(); // Remove 'data: ' prefix and trim
+                      if (jsonData) {
+                        try {
+                          const parsed = JSON.parse(jsonData);
+                          // Set JSON content type if headers not sent
+                          if (!res.headersSent) {
+                            res.setHeader('Content-Type', 'application/json');
+                          } else {
+                            // Headers already sent, but we can still modify the body
+                            // This shouldn't happen, but handle it gracefully
+                          }
+                          originalEnd(JSON.stringify(parsed));
+                          return res;
+                        } catch (e) {
+                          logger.error('Failed to parse SSE data', { error: e, data: jsonData });
+                        }
+                      }
+                    }
+                  }
+                }
+                // If no data line found or parsing failed, return original response
+                originalEnd(chunk, encoding);
+                return res;
+              }
+              return originalEnd(chunk, encoding);
+            };
+            
             // Let transport handle the request
-            // StreamableHTTPServerTransport should automatically detect SSE from Accept header
-            // and set appropriate content-type (text/event-stream) for SSE responses
             await transport.handleRequest(req, res);
           } catch (error) {
             logger.error('Error handling MCP request', { 
