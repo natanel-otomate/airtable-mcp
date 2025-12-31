@@ -158,9 +158,23 @@ Your MCP server provides 33 tools. Here are some commonly used ones:
 
 ## Step 5: MCP Protocol Flow
 
-**Important**: MCP requires an initialization handshake before using tools.
+**Important**: MCP requires an initialization handshake and session management before using tools.
 
-### Step 1: Initialize Connection
+### Step 1: Initialize Connection (Get Session ID)
+
+**⚠️ Critical**: The first `initialize` request does NOT include a `Mcp-Session-Id` header. The server will return the session ID in the response headers.
+
+**HTTP Request:**
+- **Method**: `POST`
+- **URL**: `https://airtable-mcp-production-2056.up.railway.app/mcp`
+- **Headers**:
+  ```
+  Content-Type: application/json
+  Accept: application/json
+  ```
+  **Note**: Do NOT include `Mcp-Session-Id` header in the initialize request.
+
+- **Body (JSON)**:
 ```json
 {
   "jsonrpc": "2.0",
@@ -178,6 +192,15 @@ Your MCP server provides 33 tools. Here are some commonly used ones:
 ```
 
 **Response:**
+- **Status**: `200 OK`
+- **Headers**:
+  ```
+  Content-Type: application/json
+  Mcp-Session-Id: <session-id-uuid>
+  ```
+  **⚠️ IMPORTANT**: Extract the `Mcp-Session-Id` from the response headers! You'll need it for all subsequent requests.
+
+- **Body (JSON)**:
 ```json
 {
   "jsonrpc": "2.0",
@@ -195,8 +218,23 @@ Your MCP server provides 33 tools. Here are some commonly used ones:
 }
 ```
 
+**In Make.com**: Use a "Set variable" module after the HTTP request to store the `Mcp-Session-Id` from the response headers. The header name might be lowercase (`mcp-session-id`) depending on Make.com's HTTP module.
+
 ### Step 2: Send Initialized Notification
-After receiving the initialize response, send:
+
+**⚠️ Critical**: This request MUST include the `Mcp-Session-Id` header from Step 1.
+
+**HTTP Request:**
+- **Method**: `POST`
+- **URL**: `https://airtable-mcp-production-2056.up.railway.app/mcp`
+- **Headers**:
+  ```
+  Content-Type: application/json
+  Accept: application/json
+  Mcp-Session-Id: <session-id-from-step-1>
+  ```
+
+- **Body (JSON)**:
 ```json
 {
   "jsonrpc": "2.0",
@@ -205,12 +243,25 @@ After receiving the initialize response, send:
 }
 ```
 
-**Note**: This is a notification (no `id` field) and doesn't return a response.
+**Note**: This is a notification (no `id` field) and doesn't return a response. The server should return `202 Accepted`.
 
 ### Step 3: Now You Can Use Tools
-After initialization, you can call tools.
+
+**⚠️ Critical**: ALL tool requests MUST include the `Mcp-Session-Id` header from Step 1.
 
 ### List Available Tools
+
+**HTTP Request:**
+- **Method**: `POST`
+- **URL**: `https://airtable-mcp-production-2056.up.railway.app/mcp`
+- **Headers**:
+  ```
+  Content-Type: application/json
+  Accept: application/json
+  Mcp-Session-Id: <session-id-from-step-1>
+  ```
+
+- **Body (JSON)**:
 ```json
 {
   "jsonrpc": "2.0",
@@ -221,6 +272,18 @@ After initialization, you can call tools.
 ```
 
 ### Call a Tool (Example: List Bases)
+
+**HTTP Request:**
+- **Method**: `POST`
+- **URL**: `https://airtable-mcp-production-2056.up.railway.app/mcp`
+- **Headers**:
+  ```
+  Content-Type: application/json
+  Accept: application/json
+  Mcp-Session-Id: <session-id-from-step-1>
+  ```
+
+- **Body (JSON)**:
 ```json
 {
   "jsonrpc": "2.0",
