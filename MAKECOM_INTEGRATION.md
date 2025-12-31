@@ -297,6 +297,18 @@ Your MCP server provides 33 tools. Here are some commonly used ones:
 ```
 
 ### Call a Tool (Example: List Records)
+
+**HTTP Request:**
+- **Method**: `POST`
+- **URL**: `https://airtable-mcp-production-2056.up.railway.app/mcp`
+- **Headers**:
+  ```
+  Content-Type: application/json
+  Accept: application/json
+  Mcp-Session-Id: <session-id-from-step-1>
+  ```
+
+- **Body (JSON)**:
 ```json
 {
   "jsonrpc": "2.0",
@@ -316,11 +328,15 @@ Your MCP server provides 33 tools. Here are some commonly used ones:
 ## Step 6: Testing the Integration
 
 ### Test 1: Initialize and List Tools
+
+**⚠️ Important**: Extract the `Mcp-Session-Id` from the response headers of the initialize request!
+
 ```bash
-# Step 1: Initialize
+# Step 1: Initialize (no session ID header needed)
 curl -X POST https://airtable-mcp-production-2056.up.railway.app/mcp \
   -H "Content-Type: application/json" \
-  -H "Accept: application/json, text/event-stream" \
+  -H "Accept: application/json" \
+  -i \
   -d '{
     "jsonrpc": "2.0",
     "id": 1,
@@ -331,6 +347,8 @@ curl -X POST https://airtable-mcp-production-2056.up.railway.app/mcp \
       "clientInfo": {"name": "test", "version": "1.0"}
     }
   }'
+# Note: The -i flag shows response headers. Look for "Mcp-Session-Id: <uuid>" in the headers.
+# Save this session ID for subsequent requests.
 
 # Step 2: Send initialized notification (no response expected)
 curl -X POST https://airtable-mcp-production-2056.up.railway.app/mcp \
