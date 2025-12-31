@@ -60,6 +60,7 @@ If Make.com doesn't have native MCP support, you can use the HTTP module to call
    - **Headers**:
      ```
      Content-Type: application/json
+     Accept: application/json, text/event-stream
      ```
    - **Body** (JSON):
      ```json
@@ -96,9 +97,11 @@ Your MCP server provides 33 tools. Here are some commonly used ones:
 - `batch_update_records` - Update up to 10 records
 - `batch_delete_records` - Delete up to 10 records
 
-## Step 5: Example MCP Request Format
+## Step 5: MCP Protocol Flow
 
-### Initialize Connection
+**Important**: MCP requires an initialization handshake before using tools.
+
+### Step 1: Initialize Connection
 ```json
 {
   "jsonrpc": "2.0",
@@ -114,6 +117,39 @@ Your MCP server provides 33 tools. Here are some commonly used ones:
   }
 }
 ```
+
+**Response:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {
+      "tools": {}
+    },
+    "serverInfo": {
+      "name": "airtable-brain",
+      "version": "3.2.8"
+    }
+  }
+}
+```
+
+### Step 2: Send Initialized Notification
+After receiving the initialize response, send:
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "notifications/initialized",
+  "params": {}
+}
+```
+
+**Note**: This is a notification (no `id` field) and doesn't return a response.
+
+### Step 3: Now You Can Use Tools
+After initialization, you can call tools.
 
 ### List Available Tools
 ```json
@@ -157,25 +193,54 @@ Your MCP server provides 33 tools. Here are some commonly used ones:
 
 ## Step 6: Testing the Integration
 
-### Test 1: List Available Tools
+### Test 1: Initialize and List Tools
 ```bash
+# Step 1: Initialize
 curl -X POST https://airtable-mcp-production-2056.up.railway.app/mcp \
   -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
   -d '{
     "jsonrpc": "2.0",
     "id": 1,
+    "method": "initialize",
+    "params": {
+      "protocolVersion": "2024-11-05",
+      "capabilities": {},
+      "clientInfo": {"name": "test", "version": "1.0"}
+    }
+  }'
+
+# Step 2: Send initialized notification (no response expected)
+curl -X POST https://airtable-mcp-production-2056.up.railway.app/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "notifications/initialized",
+    "params": {}
+  }'
+
+# Step 3: List tools
+curl -X POST https://airtable-mcp-production-2056.up.railway.app/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
     "method": "tools/list",
     "params": {}
   }'
 ```
 
-### Test 2: List Your Bases
+### Test 2: List Your Bases (After Initialization)
 ```bash
+# After initialization, call the tool
 curl -X POST https://airtable-mcp-production-2056.up.railway.app/mcp \
   -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
   -d '{
     "jsonrpc": "2.0",
-    "id": 2,
+    "id": 3,
     "method": "tools/call",
     "params": {
       "name": "list_bases",
