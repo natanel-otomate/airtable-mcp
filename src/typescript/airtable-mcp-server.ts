@@ -89,25 +89,71 @@ export async function start(): Promise<void> {
 
       // MCP endpoint
       if (req.url === '/mcp' || req.url === '/') {
-        try {
-          await transport.handleRequest(req, res);
-        } catch (error) {
-          logger.error('Error handling MCP request', { 
-            error: error instanceof Error ? error.message : String(error),
-            url: req.url,
-            method: req.method
+        // Handle GET requests for connection verification (Make.com compatibility)
+        if (req.method === 'GET') {
+          res.writeHead(200, { 
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization'
           });
-          if (!res.headersSent) {
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({
-              jsonrpc: '2.0',
-              error: {
-                code: -32000,
-                message: 'Internal server error'
-              }
-            }));
-          }
+          res.end(JSON.stringify({
+            status: 'ok',
+            service: 'airtable-mcp',
+            version: config.version,
+            protocol: 'MCP 2024-11-05',
+            endpoint: '/mcp',
+            methods: ['POST'],
+            message: 'MCP server is running. Use POST method for MCP protocol requests.'
+          }));
+          return;
         }
+
+        // Handle OPTIONS for CORS preflight
+        if (req.method === 'OPTIONS') {
+          res.writeHead(200, {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept',
+            'Access-Control-Max-Age': '86400'
+          });
+          res.end();
+          return;
+        }
+
+        // Handle POST requests for MCP protocol
+        if (req.method === 'POST') {
+          try {
+            await transport.handleRequest(req, res);
+          } catch (error) {
+            logger.error('Error handling MCP request', { 
+              error: error instanceof Error ? error.message : String(error),
+              url: req.url,
+              method: req.method
+            });
+            if (!res.headersSent) {
+              res.writeHead(500, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({
+                jsonrpc: '2.0',
+                error: {
+                  code: -32000,
+                  message: 'Internal server error'
+                }
+              }));
+            }
+          }
+          return;
+        }
+
+        // Method not allowed
+        res.writeHead(405, { 
+          'Content-Type': 'application/json',
+          'Allow': 'GET, POST, OPTIONS'
+        });
+        res.end(JSON.stringify({
+          error: 'Method not allowed',
+          allowed: ['GET', 'POST', 'OPTIONS']
+        }));
         return;
       }
 
