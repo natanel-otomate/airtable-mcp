@@ -2,10 +2,18 @@
 nixPkgs = ["nodejs_20"]
 
 [phases.install]
-cmds = ["npm ci --ignore-scripts"]
+cmds = [
+  "npm ci --ignore-scripts",
+  "echo 'Verifying source files...'",
+  "ls -la src/typescript/ || echo 'src/typescript not found'",
+  "test -f src/typescript/airtable-mcp-server.ts && echo '✓ airtable-mcp-server.ts found' || echo '✗ airtable-mcp-server.ts not found'"
+]
 
 [phases.build]
-cmds = ["npm run build"]
+cmds = [
+  "echo 'Building TypeScript...'",
+  "npm run build"
+]
 
 [start]
 cmd = "node dist/typescript/airtable-mcp-server.js"
