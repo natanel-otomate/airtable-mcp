@@ -39,7 +39,9 @@ Expected response:
 
 ## Step 3: Add MCP Server Connection
 
-### Option A: If Make.com Supports Direct MCP Integration
+**⚠️ Important Note**: Make.com's native MCP integration may have compatibility issues with the MCP server's HTTP transport. If you encounter "SSE error" or "Server already initialized" errors, use **Option B (HTTP Modules)** instead, which provides more reliable integration.
+
+### Option A: If Make.com Supports Direct MCP Integration (May Have Issues)
 
 1. In your AI Agent settings, look for **"MCP Servers"** or **"Tools"** section
 2. Click **"Add MCP Server"** or **"Add Tool"**
@@ -51,6 +53,25 @@ Expected response:
    - **Important**: Do NOT provide an access token in Make.com - the server doesn't require client authentication
 
 ### Troubleshooting
+
+#### "SSE error: Invalid content type, expected 'text/event-stream'" Error
+
+**This is the most common error when using Make.com's native MCP integration.**
+
+**Root Cause**: Make.com's MCP client expects Server-Sent Events (SSE) with `text/event-stream` content type, but there's a compatibility issue between Make.com's client and the MCP SDK's `StreamableHTTPServerTransport`.
+
+**Solution**: **Use Option B (HTTP Modules)** instead of Make.com's native MCP integration. The HTTP module approach gives you full control over the requests and responses, avoiding the SSE compatibility issue.
+
+**Why this happens**:
+- The MCP server uses `StreamableHTTPServerTransport` which should handle SSE automatically
+- Make.com's client is sending requests expecting SSE responses
+- There's a mismatch in how Make.com expects SSE vs. how the transport provides it
+- This is a **Make.com client compatibility issue**, not a server bug
+
+**Workaround if you must use native integration**:
+1. Wait for Make.com to update their MCP client implementation
+2. Contact Make.com support about MCP SSE compatibility
+3. Use HTTP modules (Option B) as a reliable alternative
 
 #### "Server already initialized" Error
 
@@ -85,9 +106,11 @@ If you see a **401 Unauthorized** error in Make.com's console:
    - Try entering a dummy value (like "none" or "not-required")
    - Or contact Make.com support about MCP servers that don't require client authentication
 
-### Option B: Using HTTP Module (If Direct MCP Not Supported)
+### Option B: Using HTTP Module (Recommended - More Reliable)
 
-If Make.com doesn't have native MCP support, you can use the HTTP module to call MCP tools:
+**This is the recommended approach** because it avoids compatibility issues with Make.com's native MCP client (SSE errors, initialization conflicts, etc.). The HTTP module gives you explicit control over the MCP protocol.
+
+Use the HTTP module to call MCP tools directly:
 
 1. **Add an HTTP module** before your AI Agent
 2. **Configure the HTTP request**:
