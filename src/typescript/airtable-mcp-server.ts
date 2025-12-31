@@ -124,10 +124,29 @@ export async function start(): Promise<void> {
         // Handle POST requests for MCP protocol
         if (req.method === 'POST') {
           try {
+            // Log request details for debugging
+            logger.debug('Handling MCP POST request', {
+              url: req.url,
+              headers: {
+                'content-type': req.headers['content-type'],
+                'accept': req.headers['accept'],
+                'user-agent': req.headers['user-agent']
+              }
+            });
+            
+            // Ensure proper headers for SSE if requested
+            const acceptHeader = req.headers['accept'] || '';
+            if (acceptHeader.includes('text/event-stream')) {
+              // Transport should handle SSE automatically, but ensure headers are set
+              res.setHeader('Cache-Control', 'no-cache');
+              res.setHeader('Connection', 'keep-alive');
+            }
+            
             await transport.handleRequest(req, res);
           } catch (error) {
             logger.error('Error handling MCP request', { 
               error: error instanceof Error ? error.message : String(error),
+              stack: error instanceof Error ? error.stack : undefined,
               url: req.url,
               method: req.method
             });
