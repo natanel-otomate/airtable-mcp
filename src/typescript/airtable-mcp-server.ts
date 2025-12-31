@@ -142,19 +142,9 @@ export async function start(): Promise<void> {
             // Make.com might send Authorization headers, but we ignore them
             // The Airtable token is configured server-side via environment variables
             
-            // Check if client wants SSE (Server-Sent Events)
-            const acceptHeader = req.headers['accept'] || '';
-            const wantsSSE = acceptHeader.includes('text/event-stream');
-            
-            if (wantsSSE) {
-              // Set SSE headers before transport handles the request
-              res.setHeader('Content-Type', 'text/event-stream');
-              res.setHeader('Cache-Control', 'no-cache');
-              res.setHeader('Connection', 'keep-alive');
-              res.setHeader('X-Accel-Buffering', 'no'); // Disable buffering for SSE
-            }
-            
-            // Let transport handle the request (it should detect SSE from Accept header)
+            // Let transport handle the request
+            // StreamableHTTPServerTransport should automatically detect SSE from Accept header
+            // and set appropriate content-type (text/event-stream) for SSE responses
             await transport.handleRequest(req, res);
           } catch (error) {
             logger.error('Error handling MCP request', { 
