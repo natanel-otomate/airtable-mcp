@@ -97,19 +97,21 @@ export async function start(): Promise<void> {
             // Let transport handle SSE GET request
             try {
               await transport.handleRequest(req, res);
+              return;
             } catch (error) {
               logger.error('Error handling SSE GET request', { 
-                error: error instanceof Error ? error.message : String(error)
+                error: error instanceof Error ? error.message : String(error),
+                stack: error instanceof Error ? error.stack : undefined
               });
-              if (!res.headersSent) {
-                res.writeHead(500, { 'Content-Type': 'text/plain' });
-                res.end('SSE connection failed');
+              // If transport fails, fall through to regular GET response
+              if (res.headersSent) {
+                return;
               }
             }
-            return;
           }
           
           // Regular GET request for connection verification
+          // Always return success for GET requests (Make.com compatibility)
           res.writeHead(200, { 
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*',
