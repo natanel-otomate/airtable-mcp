@@ -47,7 +47,20 @@ Expected response:
    - **Name**: `Airtable MCP`
    - **URL**: `https://airtable-mcp-production-2056.up.railway.app/mcp`
    - **Protocol**: HTTP/JSON-RPC 2.0
-   - **Authentication**: None (your Airtable token is already in the server)
+   - **Authentication**: **Leave empty** (your Airtable token is already in the server)
+   - **Important**: Do NOT provide an access token in Make.com - the server doesn't require client authentication
+
+### Troubleshooting "Server already initialized" Error
+
+If you see the error `"Server already initialized"`, it means Make.com is trying to initialize the same session twice. This can happen if:
+
+1. **Make.com retries the connection** - Wait a few seconds and try again
+2. **Session persistence** - Make.com might be caching the session. Try:
+   - Clearing the AI Agent connection and re-adding it
+   - Using a different connection name
+   - Waiting 30-60 seconds between connection attempts
+
+**Note**: The MCP server uses session-based connections. Each new connection should create a new session automatically. If you continue to see this error, it may be a Make.com client issue with session management.
 
 ### Option B: Using HTTP Module (If Direct MCP Not Supported)
 

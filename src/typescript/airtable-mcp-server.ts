@@ -74,6 +74,7 @@ export async function start(): Promise<void> {
 
   if (httpPort) {
     // HTTP transport for hosted deployments
+    // Create transport with session management
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => crypto.randomUUID(),
     });
@@ -88,7 +89,25 @@ export async function start(): Promise<void> {
 
       // MCP endpoint
       if (req.url === '/mcp' || req.url === '/') {
-        await transport.handleRequest(req, res);
+        try {
+          await transport.handleRequest(req, res);
+        } catch (error) {
+          logger.error('Error handling MCP request', { 
+            error: error instanceof Error ? error.message : String(error),
+            url: req.url,
+            method: req.method
+          });
+          if (!res.headersSent) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+              jsonrpc: '2.0',
+              error: {
+                code: -32000,
+                message: 'Internal server error'
+              }
+            }));
+          }
+        }
         return;
       }
 
@@ -96,6 +115,8 @@ export async function start(): Promise<void> {
       res.end('Not Found');
     });
 
+    // Connect server to transport
+    // Note: StreamableHTTPServerTransport manages sessions per request
     await server.connect(transport);
 
     const port = parseInt(httpPort, 10);
