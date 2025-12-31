@@ -8,6 +8,7 @@ const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { StreamableHTTPServerTransport } = require('@modelcontextprotocol/sdk/server/streamableHttp.js');
 import * as http from 'node:http';
+import * as crypto from 'node:crypto';
 import { loadConfig } from './app/config';
 import { Logger } from './app/logger';
 import { RateLimiter } from './app/rateLimiter';
@@ -98,12 +99,19 @@ export async function start(): Promise<void> {
     await server.connect(transport);
 
     const port = parseInt(httpPort, 10);
-    httpServer.listen(port, () => {
+    httpServer.listen(port, '0.0.0.0', () => {
       logger.info('Airtable Brain MCP server ready (HTTP mode)', {
         version: config.version,
         protocolVersion: PROTOCOL_VERSION,
         port
       });
+      console.log(`Server listening on port ${port}`);
+    });
+
+    httpServer.on('error', (error: Error) => {
+      logger.error('HTTP server error', { error: error.message, stack: error.stack });
+      console.error('HTTP server error:', error);
+      process.exit(1);
     });
 
     const shutdown = async (signal: string) => {
@@ -141,6 +149,7 @@ if (typeof require !== 'undefined' && require.main === module) {
   start().catch((error) => {
     // eslint-disable-next-line no-console
     console.error('Failed to start Airtable Brain MCP server:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : String(error));
     process.exit(1);
   });
 }
