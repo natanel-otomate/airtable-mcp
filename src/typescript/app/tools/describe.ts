@@ -154,10 +154,33 @@ Use detailLevel to optimize context usage:
           detailLevel
         });
 
-        const [baseInfo, tableInfo] = await Promise.all([
-          ctx.airtable.getBase(input.baseId),
-          ctx.airtable.listTables(input.baseId)
-        ]);
+        // Try to get base info first to provide better error messages
+        let baseInfo: unknown;
+        let tableInfo: { tables: unknown[] };
+        
+        try {
+          baseInfo = await ctx.airtable.getBase(input.baseId);
+        } catch (error) {
+          // If getBase fails, try listTables to see if it's a different issue
+          // This helps diagnose if it's a base access issue vs table access issue
+          ctx.logger.warn('getBase failed, attempting listTables for diagnostic purposes', {
+            baseId: input.baseId,
+            error: error instanceof Error ? error.message : String(error)
+          });
+          // Re-throw the error - we want to fail fast if base access is denied
+          throw error;
+        }
+        
+        try {
+          tableInfo = await ctx.airtable.listTables(input.baseId);
+        } catch (error) {
+          // If listTables fails but getBase succeeded, log this for debugging
+          ctx.logger.error('getBase succeeded but listTables failed', {
+            baseId: input.baseId,
+            error: error instanceof Error ? error.message : String(error)
+          });
+          throw error;
+        }
 
         const baseName =
           typeof (baseInfo as any)?.name === 'string'

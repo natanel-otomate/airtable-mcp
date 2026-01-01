@@ -51,19 +51,42 @@ Troubleshooting:
         ? `\n\nAirtable message: ${error.context.upstreamErrorMessage}`
         : '';
       
+      // Extract base ID from list_bases if available to help user verify
+      const verificationSteps = `Troubleshooting:
+1. **Verify Base ID Matches Exactly**: 
+   - Run list_bases and compare the base ID character-by-character
+   - Base IDs are case-sensitive: "appQVIZeJSCJmmtpA" must match exactly
+   - Check for any hidden characters or encoding issues
+
+2. **Token Must Have Explicit Base Access** (Not Just Workspace):
+   - Go to https://airtable.com/create/tokens
+   - Edit your token
+   - In "Access" section, the base "MrJapan (Heb) 🇮🇱" must be EXPLICITLY listed
+   - If you only see workspace "MR JAPAN", click "+ Add a base" and add the specific base
+   - Workspace access ≠ Base access in Airtable's permission model
+
+3. **Verify Token Scopes**:
+   • schema.bases:read (for describe/list operations)
+   • data.records:read (for query operations)
+   • data.records:write (for create/update operations)
+
+4. **Update Railway**:
+   - Railway → Variables → Update AIRTABLE_PAT or AIRTABLE_TOKEN
+   - Copy the ENTIRE token (~82 characters, starts with "pat.")
+   - Restart Railway deployment after updating
+
+5. **Test Token Directly** (to isolate server vs token issue):
+   \`\`\`bash
+   curl -H "Authorization: Bearer YOUR_TOKEN" \\
+     https://api.airtable.com/v0/meta/bases/appQVIZeJSCJmmtpA
+   \`\`\`
+   If this also fails, it's a token permission issue, not a server issue.${warningsText}${upstreamMessage}${fullError}`;
+
       return `Authentication failed for base "${baseId}".
 
 Your token is valid but cannot access this specific base.
 
-Troubleshooting:
-1. Run list_bases to see which bases your token can access
-2. If this base is not listed, regenerate your token with access to it
-3. Verify your token has the required scopes:
-   • schema.bases:read (for describe/list operations)
-   • data.records:read (for query operations)
-   • data.records:write (for create/update operations)
-4. Check Railway environment variables - ensure AIRTABLE_PAT or AIRTABLE_TOKEN is updated with the new token
-5. Restart Railway deployment after updating the token${warningsText}${upstreamMessage}${fullError}`;
+${verificationSteps}`;
     }
     return `Authentication failed: Token lacks required permissions.
 
