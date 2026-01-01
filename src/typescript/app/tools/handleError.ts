@@ -43,6 +43,14 @@ Troubleshooting:
 
   if (errorType === 'INVALID_PERMISSIONS_OR_MODEL_NOT_FOUND') {
     if (baseId) {
+      // Include full error response for debugging
+      const fullError = error.context?.fullErrorResponse 
+        ? `\n\nFull Airtable error response:\n${JSON.stringify(error.context.fullErrorResponse, null, 2)}`
+        : '';
+      const upstreamMessage = error.context?.upstreamErrorMessage 
+        ? `\n\nAirtable message: ${error.context.upstreamErrorMessage}`
+        : '';
+      
       return `Authentication failed for base "${baseId}".
 
 Your token is valid but cannot access this specific base.
@@ -53,7 +61,9 @@ Troubleshooting:
 3. Verify your token has the required scopes:
    • schema.bases:read (for describe/list operations)
    • data.records:read (for query operations)
-   • data.records:write (for create/update operations)${warningsText}`;
+   • data.records:write (for create/update operations)
+4. Check Railway environment variables - ensure AIRTABLE_PAT or AIRTABLE_TOKEN is updated with the new token
+5. Restart Railway deployment after updating the token${warningsText}${upstreamMessage}${fullError}`;
     }
     return `Authentication failed: Token lacks required permissions.
 

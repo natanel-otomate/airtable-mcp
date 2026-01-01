@@ -352,12 +352,30 @@ export class AirtableClient {
     const { type: upstreamErrorType, message: upstreamErrorMessage } = this.safeExtractErrorInfo(body);
     const requestId = this.extractRequestId(headers);
 
+    // Enhanced logging for debugging authentication issues
+    if (status === 401 || status === 403) {
+      this.logger.error('Airtable authentication/authorization error', {
+        status,
+        endpoint: request.path,
+        baseId: request.baseId,
+        upstreamErrorType,
+        upstreamErrorMessage,
+        requestId,
+        fullErrorBody: JSON.stringify(body, null, 2),
+        headers: {
+          'x-request-id': requestId,
+          'content-type': headers['content-type']
+        }
+      });
+    }
+
     const baseContext: ErrorContext = {
       endpoint: request.path,
       ...(request.baseId && { baseId: request.baseId }),
       ...(upstreamErrorType && { upstreamErrorType }),
       ...(upstreamErrorMessage && { upstreamErrorMessage }),
-      ...(requestId && { upstreamRequestId: requestId })
+      ...(requestId && { upstreamRequestId: requestId }),
+      ...(body && typeof body === 'object' && { fullErrorResponse: body })
     };
 
     if (status === 401 || status === 403) {
