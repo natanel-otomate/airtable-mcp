@@ -154,32 +154,24 @@ Use detailLevel to optimize context usage:
           detailLevel
         });
 
-        // Try to get base info first to provide better error messages
-        let baseInfo: unknown;
-        let tableInfo: { tables: unknown[] };
+        // Get table info - this is the reliable way to access base metadata
+        // Note: getBase() endpoint may not be available for all tokens, but listTables() works
+        // if you can access tables directly (which the user confirmed works)
+        const tableInfo = await ctx.airtable.listTables(input.baseId);
         
+        // Try to get base info, but don't fail if it's not available
+        // Some tokens can access tables but not the /meta/bases/{baseId} endpoint
+        let baseInfo: unknown;
         try {
           baseInfo = await ctx.airtable.getBase(input.baseId);
         } catch (error) {
-          // If getBase fails, try listTables to see if it's a different issue
-          // This helps diagnose if it's a base access issue vs table access issue
-          ctx.logger.warn('getBase failed, attempting listTables for diagnostic purposes', {
+          // getBase endpoint may not be available - this is okay, we can still work with tables
+          ctx.logger.debug('getBase endpoint not available, using baseId as name', {
             baseId: input.baseId,
             error: error instanceof Error ? error.message : String(error)
           });
-          // Re-throw the error - we want to fail fast if base access is denied
-          throw error;
-        }
-        
-        try {
-          tableInfo = await ctx.airtable.listTables(input.baseId);
-        } catch (error) {
-          // If listTables fails but getBase succeeded, log this for debugging
-          ctx.logger.error('getBase succeeded but listTables failed', {
-            baseId: input.baseId,
-            error: error instanceof Error ? error.message : String(error)
-          });
-          throw error;
+          // Use baseId as fallback name - we can still provide table schema
+          baseInfo = { name: input.baseId };
         }
 
         const baseName =
