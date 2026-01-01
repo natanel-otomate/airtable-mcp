@@ -374,9 +374,13 @@ export class AirtableClient {
       ...(request.baseId && { baseId: request.baseId }),
       ...(upstreamErrorType && { upstreamErrorType }),
       ...(upstreamErrorMessage && { upstreamErrorMessage }),
-      ...(requestId && { upstreamRequestId: requestId }),
-      ...(body && typeof body === 'object' && { fullErrorResponse: body })
+      ...(requestId && { upstreamRequestId: requestId })
     };
+    
+    // Add full error response if body is an object (for debugging)
+    if (body && typeof body === 'object' && body !== null && !Array.isArray(body)) {
+      baseContext.fullErrorResponse = body as Record<string, unknown>;
+    }
 
     if (status === 401 || status === 403) {
       return new AuthError('Authentication failed with Airtable', {

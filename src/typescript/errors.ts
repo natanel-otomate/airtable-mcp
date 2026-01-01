@@ -27,6 +27,7 @@ export interface ErrorContext {
   governanceRule?: string;
   endpoint?: string;
   tokenFormatWarnings?: string[];
+  fullErrorResponse?: Record<string, unknown>;
 }
 
 interface AirtableErrorOptions {
