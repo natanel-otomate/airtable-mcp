@@ -110,8 +110,40 @@ Check Railway logs for these details when the error occurs.
 
 ### Still Not Working?
 
-1. **Check Railway Logs** for the full error response
+#### Common Issue: Workspace vs Base Permissions
+
+If `list_bases` works but specific base access fails, this often indicates:
+
+**The Problem:**
+- Your token can see bases at the workspace level (`/v0/meta/bases`)
+- But cannot access specific bases (`/v0/meta/bases/{baseId}`)
+- This happens when the base is in a workspace you have access to, but the token doesn't have explicit base-level permissions
+
+**The Solution:**
+1. Go to https://airtable.com/create/tokens
+2. Edit your token
+3. In the "Access" section, ensure the specific base is listed (not just the workspace)
+4. If you see only the workspace "MR JAPAN", click "+ Add a base"
+5. Select "MrJapan (Heb) 🇮🇱" (base ID: `appQVIZeJSCJmmtpA`)
+6. Save the token
+7. Update Railway and restart
+
+**Important:** Having workspace access ≠ having base access. The base must be explicitly listed in the token's access settings.
+
+#### Additional Debugging
+
+1. **Check Railway Logs** for the full error response and request details
 2. **Verify token format** - should be ~82 characters, start with `pat.`
-3. **Test with curl** to isolate if it's a server issue or token issue
-4. **Contact Airtable Support** with the request ID from error logs
+3. **Test with curl** to isolate if it's a server issue or token issue:
+   ```bash
+   # Test list_bases (should work)
+   curl -H "Authorization: Bearer YOUR_TOKEN" \
+     https://api.airtable.com/v0/meta/bases
+   
+   # Test specific base (might fail)
+   curl -H "Authorization: Bearer YOUR_TOKEN" \
+     https://api.airtable.com/v0/meta/bases/appQVIZeJSCJmmtpA
+   ```
+4. **Verify base ID** - Ensure the base ID from `list_bases` matches exactly (case-sensitive)
+5. **Contact Airtable Support** with the request ID from error logs if the issue persists
 

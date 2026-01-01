@@ -103,6 +103,12 @@ export class AirtableClient {
   }
 
   async getBase(baseId: string): Promise<unknown> {
+    // Log the exact request being made for debugging
+    this.logger.debug('Getting base info', {
+      baseId,
+      encodedBaseId: encodeURIComponent(baseId),
+      path: `/v0/meta/bases/${encodeURIComponent(baseId)}`
+    });
     return this.request<unknown>({
       method: 'GET',
       path: `/v0/meta/bases/${encodeURIComponent(baseId)}`,
@@ -111,6 +117,12 @@ export class AirtableClient {
   }
 
   async listTables(baseId: string): Promise<{ tables: unknown[] }> {
+    // Log the exact request being made for debugging
+    this.logger.debug('Listing tables', {
+      baseId,
+      encodedBaseId: encodeURIComponent(baseId),
+      path: `/v0/meta/bases/${encodeURIComponent(baseId)}/tables`
+    });
     return this.request<{ tables: unknown[] }>({
       method: 'GET',
       path: `/v0/meta/bases/${encodeURIComponent(baseId)}/tables`,
