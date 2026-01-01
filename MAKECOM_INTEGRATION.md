@@ -138,8 +138,8 @@ Use the HTTP module to call MCP tools directly:
 Your MCP server provides 33 tools. Here are some commonly used ones:
 
 ### Data Operations
-- `list_tables` - List all tables in a base
-- `list_records` - Query records with filtering
+- `query` - Query records from a table (recommended - works even when meta endpoints don't)
+- `list_records` - Query records with filtering (legacy, use `query` instead)
 - `get_record` - Get a single record by ID
 - `create_record` - Create new records
 - `update_record` - Update existing records
@@ -148,8 +148,10 @@ Your MCP server provides 33 tools. Here are some commonly used ones:
 
 ### Schema Discovery
 - `list_bases` - List all accessible bases
-- `get_base_schema` - Get complete schema for a base
-- `describe_table` - Get detailed table information
+- `describe` - Get base/table schema (may fail if meta endpoints unavailable)
+- `get_base_schema` - Get complete schema for a base (may fail if meta endpoints unavailable)
+
+**⚠️ Important Note**: If the `describe` tool fails with "meta endpoint not available", you'll need to know your table names beforehand. You can find them in the Airtable UI or by using table names you already know with the `query` tool.
 
 ### Batch Operations
 - `batch_create_records` - Create up to 10 records at once
@@ -296,7 +298,7 @@ Your MCP server provides 33 tools. Here are some commonly used ones:
 }
 ```
 
-### Call a Tool (Example: List Records)
+### Call a Tool (Example: Query Records - Recommended)
 
 **HTTP Request:**
 - **Method**: `POST`
@@ -315,15 +317,17 @@ Your MCP server provides 33 tools. Here are some commonly used ones:
   "id": 4,
   "method": "tools/call",
   "params": {
-    "name": "list_records",
+    "name": "query",
     "arguments": {
-      "baseId": "your_base_id",
-      "table": "Table Name",
+      "baseId": "appQVIZeJSCJmmtpA",
+      "table": "📝 Client Info",
       "maxRecords": 10
     }
   }
 }
 ```
+
+**Note**: The `query` tool works even when meta endpoints are unavailable. You need to know the table name (you can find it in Airtable's UI or use a table name you already know).
 
 ## Step 6: Testing the Integration
 
