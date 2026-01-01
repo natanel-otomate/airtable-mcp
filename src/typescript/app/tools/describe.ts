@@ -154,11 +154,6 @@ Use detailLevel to optimize context usage:
           detailLevel
         });
 
-        // Get table info - this is the reliable way to access base metadata
-        // Note: getBase() endpoint may not be available for all tokens, but listTables() works
-        // if you can access tables directly (which the user confirmed works)
-        const tableInfo = await ctx.airtable.listTables(input.baseId);
-        
         // Try to get base info, but don't fail if it's not available
         // Some tokens can access tables but not the /meta/bases/{baseId} endpoint
         let baseInfo: unknown;
@@ -172,6 +167,32 @@ Use detailLevel to optimize context usage:
           });
           // Use baseId as fallback name - we can still provide table schema
           baseInfo = { name: input.baseId };
+        }
+        
+        // Get table info - try listTables, but if it fails, we'll provide a helpful error
+        // Note: listTables uses /v0/meta/bases/{baseId}/tables which may also not be available
+        // for all token types, even though direct table access works
+        let tableInfo: { tables: unknown[] };
+        try {
+          tableInfo = await ctx.airtable.listTables(input.baseId);
+        } catch (error) {
+          // If listTables fails, provide a helpful error message
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          logger.error('listTables failed - meta endpoint may not be available for this token', {
+            baseId: input.baseId,
+            error: errorMessage
+          });
+          
+          // Check if it's a permission error
+          if (errorMessage.includes('INVALID_PERMISSIONS') || errorMessage.includes('403') || errorMessage.includes('401')) {
+            throw new Error(
+              `Cannot access base metadata. Your token can access tables directly but the /v0/meta/bases/${input.baseId}/tables endpoint is not available.\n\n` +
+              `This is a known limitation with some Airtable token configurations.\n\n` +
+              `Workaround: Use the 'query' tool with a known table name to access your data.\n` +
+              `Example: query records from a table you know exists in this base.`
+            );
+          }
+          throw error;
         }
 
         const baseName =
